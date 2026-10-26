@@ -71,6 +71,52 @@ final class SdkTest extends TestCase
         }
     }
 
+    public function testOAuthAuthorizeExchangeAndIdToken(): void
+    {
+        $calls = [];
+        $responses = [
+            [['success' => true, 'message' => 'ok', 'data' => [
+                'authorization_url' => 'https://accounts.google.com/o/oauth2/v2/auth?state=s',
+                'state' => 's',
+                'expires_at' => '2026-01-01T00:00:00Z',
+            ]], 200],
+            [['success' => true, 'message' => 'ok', 'data' => [
+                'user' => ['id' => 'u1', 'project_id' => 'proj-1'],
+                'tokens' => ['access_token' => 'oauth-token', 'refresh_token' => ''],
+            ]], 200],
+            [['success' => true, 'message' => 'ok', 'data' => [
+                'user' => ['id' => 'u1', 'project_id' => 'proj-1'],
+                'tokens' => ['access_token' => 'apple-token', 'refresh_token' => ''],
+            ]], 200],
+        ];
+
+        $http = $this->fakeHttp(function (string $url, string $method, ?array $body) use (&$calls, &$responses): array {
+            $calls[] = ['url' => $url, 'method' => $method, 'body' => $body];
+            return array_shift($responses);
+        });
+        $db = RafikiDB::create('proj-1', 'key-1');
+        $db->client->setHttp($http);
+
+        $authorized = $db->auth->signInWithOAuth('google', 'https://app.example.com/auth/callback');
+        $this->assertSame('s', $authorized->data['state']);
+        $this->assertStringContainsString(
+            '/projects/proj-1/auth/oauth/google/authorize',
+            $calls[0]['url'],
+        );
+        $this->assertStringContainsString(
+            'redirect_to=https%3A%2F%2Fapp.example.com%2Fauth%2Fcallback',
+            $calls[0]['url'],
+        );
+
+        $db->auth->exchangeOAuthCode('one-time-code');
+        $this->assertSame('one-time-code', $calls[1]['body']['code']);
+        $this->assertSame('oauth-token', $db->client->session()['tokens']['access_token']);
+
+        $db->auth->signInWithIdToken('apple', 'header.payload.signature', nonce: 'n1', fullName: 'Asha');
+        $this->assertSame('header.payload.signature', $calls[2]['body']['id_token']);
+        $this->assertSame('apple-token', $db->client->session()['tokens']['access_token']);
+    }
+
     public function testJoinRequiresColumns(): void
     {
         $db = RafikiDB::create('p', 'k');

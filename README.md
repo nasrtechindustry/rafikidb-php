@@ -150,13 +150,13 @@ $db->from('profiles')->insert([
     ['full_name' => 'Juma', 'nationality' => 'Kenya'],
 ]);
 
-// Update matching rows
+// Update matching rows (the eq('id', ...) filter must be set first)
 $db->from('profiles')
-    ->update(['nationality' => 'Kenya'])
-    ->eq('id', '9f8a7b6c-...');
+    ->eq('id', '9f8a7b6c-...')
+    ->update(['nationality' => 'Kenya']);
 
 // Delete matching rows
-$db->from('profiles')->delete()->eq('id', '9f8a7b6c-...');
+$db->from('profiles')->eq('id', '9f8a7b6c-...')->delete();
 ```
 
 ### Raw request
@@ -164,13 +164,13 @@ $db->from('profiles')->delete()->eq('id', '9f8a7b6c-...');
 For anything not covered by the builder, use the raw client:
 
 ```php
-$db->request('/projects/' . $db->projectId() . '/data/profiles', 'GET', null, ['limit' => 5]);
-// or the shortcuts
-$db->get($path, $query);
-$db->post($path, $body);
-$db->patch($path, $body);
-$db->put($path, $body);
-$db->delete($path);
+$db->request('/projects/' . $db->client->projectId() . '/data/profiles', 'GET');
+// or the shortcuts on the low-level client
+$db->client->get($path, $query); // supports query params
+$db->client->post($path, $body);
+$db->client->patch($path, $body);
+$db->client->put($path, $body);
+$db->client->delete($path);
 ```
 
 ## Auth
@@ -186,10 +186,10 @@ $session = $db->auth->login('asha@example.com', 'strong-pass1');
 // $session->data contains the user + access/refresh tokens
 
 // Restore a session from storage (see persistence below)
-$db->auth->setSession(json_decode($storedJson, true));
+$db->client->setSession(json_decode($storedJson, true));
 
 // Read the signed-in user
-$user = $db->auth->session(); // array or null
+$user = $db->client->session(); // array or null
 
 // Sign out (clears the in-memory session)
 $db->auth->signOut();
@@ -203,6 +203,20 @@ $db->auth->otpRequest('+255712345678');
 
 // Verify it (signs the user in)
 $db->auth->otpVerify('+255712345678', '123456', 'Asha Mwinyi');
+```
+
+### Google / Apple
+
+```php
+// Browser redirect flow
+$authorized = $db->auth->signInWithOAuth('google', 'https://app.example.com/auth/callback');
+header('Location: ' . $authorized->data['authorization_url']);
+
+// On the callback page:
+$db->auth->exchangeOAuthCode($_GET['code']);
+
+// Native ID token (Google Sign-In / Sign in with Apple)
+$db->auth->signInWithIdToken('apple', $identityToken, nonce: 'n1', fullName: 'Asha Mwinyi');
 ```
 
 ### Password reset
@@ -228,10 +242,10 @@ The client keeps the session in memory only. To keep users signed in across requ
 
 ```php
 // After login
-file_put_contents('/tmp/session.json', json_encode($db->auth->session()));
+file_put_contents('/tmp/session.json', json_encode($db->client->session()));
 
 // On the next request
-$db->auth->setSession(json_decode(file_get_contents('/tmp/session.json'), true));
+$db->client->setSession(json_decode(file_get_contents('/tmp/session.json'), true));
 ```
 
 ## Realtime

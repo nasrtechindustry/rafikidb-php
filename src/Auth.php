@@ -61,6 +61,60 @@ final class Auth
         return $this->storeSession($env);
     }
 
+    /**
+     * Get a Google/Apple authorization URL.
+     *
+     * Open `authorization_url` in a browser. The provider returns the user to
+     * `$redirectTo` with `?code=`; exchange it with exchangeOAuthCode(). The
+     * redirect URL must be allow-listed in the dashboard's Auth settings.
+     */
+    public function oauthAuthorize(string $provider, ?string $redirectTo = null): Envelope
+    {
+        return $this->client->get(
+            '/projects/' . $this->client->projectId() . '/auth/oauth/' . $provider . '/authorize',
+            $redirectTo === null ? null : ['redirect_to' => $redirectTo],
+        );
+    }
+
+    /** Supabase-style alias of oauthAuthorize(). */
+    public function signInWithOAuth(string $provider, ?string $redirectTo = null): Envelope
+    {
+        return $this->oauthAuthorize($provider, $redirectTo);
+    }
+
+    /** Exchange the one-time OAuth `?code=` for a session. */
+    public function exchangeOAuthCode(string $code): Envelope
+    {
+        $env = $this->client->post('/projects/' . $this->client->projectId() . '/auth/oauth/exchange', [
+            'code' => $code,
+        ]);
+        return $this->storeSession($env);
+    }
+
+    /**
+     * Native sign-in with a Google/Apple ID token.
+     *
+     * @param array<string, mixed>|null $metadata
+     */
+    public function signInWithIdToken(
+        string $provider,
+        string $idToken,
+        ?string $nonce = null,
+        ?string $fullName = null,
+        ?array $metadata = null,
+    ): Envelope {
+        $env = $this->client->post(
+            '/projects/' . $this->client->projectId() . '/auth/oauth/' . $provider . '/id-token',
+            [
+                'id_token' => $idToken,
+                'nonce' => $nonce,
+                'full_name' => $fullName,
+                'metadata' => $metadata,
+            ],
+        );
+        return $this->storeSession($env);
+    }
+
     public function resetPassword(string $email): Envelope
     {
         return $this->client->post('/projects/' . $this->client->projectId() . '/auth/reset-password', [
