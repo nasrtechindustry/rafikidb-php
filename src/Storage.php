@@ -53,10 +53,11 @@ final class Storage
         return $this->client->delete('/projects/' . $this->client->projectId() . '/storage/objects/' . $objectId);
     }
 
-    public function signedUploadUrl(string $bucketId, string $objectName, ?int $contentLength = null): Envelope
+    public function signedUploadUrl(string $bucketId, string $objectName, ?int $contentLength = null, ?string $contentType = null): Envelope
     {
         return $this->client->post('/projects/' . $this->client->projectId() . '/storage/signed-upload-url', [
-            'bucket_id' => $bucketId, 'object_name' => $objectName, 'content_length' => $contentLength,
+            'bucket_id' => $bucketId, 'object_name' => $objectName,
+            'content_length' => $contentLength, 'content_type' => $contentType,
         ]);
     }
 
