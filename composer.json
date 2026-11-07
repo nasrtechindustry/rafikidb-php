@@ -1,6 +1,7 @@
 {
     "name": "rafikidb/rafikidb",
-    "description": "Typed PHP client for RafikiDB - data, auth, realtime, storage, env vars, secrets, webhooks, edge functions and payments.",
+    "version": "0.2.0",
+    "description": "Typed PHP client for RafikiDB - data, auth, realtime, storage, env vars, secrets, webhooks, edge functions, payments, email and SMS.",
     "type": "library",
     "license": "MIT",
     "require": {

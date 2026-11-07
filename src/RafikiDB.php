@@ -21,6 +21,8 @@ final class RafikiDB
     public readonly Webhooks $webhooks;
     public readonly Functions $functions;
     public readonly Payments $payments;
+    public readonly Email $email;
+    public readonly Sms $sms;
 
     public function __construct(Client $client)
     {
@@ -33,6 +35,8 @@ final class RafikiDB
         $this->webhooks = new Webhooks($client);
         $this->functions = new Functions($client);
         $this->payments = new Payments($client);
+        $this->email = new Email($client);
+        $this->sms = new Sms($client);
     }
 
     public static function create(string $projectId, string $apiKey, ?string $baseUrl = null): self

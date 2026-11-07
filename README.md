@@ -1,6 +1,6 @@
 # rafikidb/rafikidb
 
-Typed PHP client for [RafikiDB](https://rafikidb.com), a backend-as-a-service for East African applications. Covers data, auth, realtime, storage, environment variables, secrets, webhooks, edge functions and payments.
+Typed PHP client for [RafikiDB](https://rafikidb.co.tz), a backend-as-a-service for East African applications. Covers data, auth, realtime, storage, environment variables, secrets, webhooks, edge functions, payments, email and SMS.
 
 - PHP 8.1+, zero runtime dependencies (curl + json only)
 - Laravel-native: auto-discovered service provider, facade, config and auth guard
@@ -22,7 +22,7 @@ use RafikiDB\RafikiDB;
 $db = RafikiDB::create(
     projectId: '5c73dab0-...',
     apiKey: 'raf_live_...',
-    baseUrl: 'https://api.rafikidb.com/api/v1', // optional, defaults to the RafikiDB API
+    baseUrl: 'https://api.rafikidb.co.tz/api/v1', // optional, defaults to the RafikiDB API
 );
 
 $rows = $db->from('profiles')
@@ -406,6 +406,61 @@ $db->payments->snippeSession(
 $db->payments->snippeStatus($reference);
 $db->payments->listTransactions();
 $db->payments->getTransaction($transactionId);
+```
+
+## Email
+
+The project API key needs `email:write` to send and `email:read` for delivery
+history and retries.
+
+```php
+$db->email->send(
+    to: 'customer@example.com',
+    subject: 'Your receipt',
+    html: '<h1>Thanks for your order</h1>',
+);
+
+// Delivery history and retries require a dashboard user session.
+$sent = $db->email->listDeliveries();
+$db->email->retry($sent->data[0]['id']);
+```
+
+## SMS
+
+RafikiSMS delivery. The project API key needs `sms:write` to send and
+`sms:read` to read balance, sender names and delivery reports. Messages are
+limited to 160 characters.
+
+```php
+$db->sms->send(
+    phone: '255712345678',
+    message: 'Your verification code is 123456',
+);
+
+// Bulk: one message, up to 500 recipients per request.
+$db->sms->sendBulk(
+    recipients: ['255712345678', '255621728109'],
+    message: 'Your verification code is 123456',
+);
+
+// Account lookups.
+$balance = $db->sms->balance();
+$senderNames = $db->sms->senderNames();
+$reports = $db->sms->deliveryReport(
+    destAddr: '255712345678',
+    requestId: 'REQ_ID',
+);
+
+// OTP.
+$otp = $db->sms->generateOtp(phone: '255712345678');
+$check = $db->sms->verifyOtp(
+    phone: '255712345678',
+    code: '123456',
+    referenceId: $otp->data['reference_id'],
+);
+
+// Delivery history requires a dashboard user session.
+$deliveries = $db->sms->deliveries();
 ```
 
 ## Laravel
